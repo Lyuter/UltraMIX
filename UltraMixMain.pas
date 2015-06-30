@@ -123,6 +123,7 @@ var
   ActionManager: IAIMPServiceActionManager;
   Action: IAIMPAction;
 begin
+ try
   // Get active playlist
   CheckResult(CoreIntf.QueryInterface(IID_IAIMPServicePlaylistManager, PLManager));
   CheckResult(PLManager.GetActivePlaylist(ActivePL));
@@ -136,6 +137,9 @@ begin
   CheckResult(CoreIntf.QueryInterface(IID_IAIMPServiceActionManager, ActionManager));
   CheckResult(ActionManager.GetByID(MakeString(UM_HOTKEY_ID), Action));
   CheckResult(Action.SetValueAsInt32(AIMP_ACTION_PROPID_ENABLED, PLIsReadOnly));
+ except
+  ShowErrorMessage('"UpdateActionStatusForActivePlaylist" failure!');
+ end;
 end;
 
 {=========================================================================)
@@ -171,12 +175,15 @@ begin
       Result := inherited Initialize(Core);
       if Succeeded(Result)
       then
-        begin
+        try
           CreateActionAndMenu;
+          // Creating the message hook
           CheckResult(CoreIntf.QueryInterface(IID_IAIMPServiceMessageDispatcher,
                                                 UMServiceMessageDispatcher));
           UMMessageHook := TUMMessageHook.Create;
           CheckResult(UMServiceMessageDispatcher.Hook(UMMessageHook));
+        except
+          Result := E_UNEXPECTED;
         end;
     end;
 end;
@@ -186,9 +193,14 @@ procedure TUMPlugin.Finalize;
 var
   UMServiceMessageDispatcher: IAIMPServiceMessageDispatcher;
 begin
+ try
+  // Removing the message hook
   CheckResult(CoreIntf.QueryInterface(IID_IAIMPServiceMessageDispatcher,
                                                 UMServiceMessageDispatcher));
   CheckResult(UMServiceMessageDispatcher.Unhook(UMMessageHook));
+ except
+  ShowErrorMessage('"Plugin.Finalize" failure!');
+ end;
   inherited;
 end;
 {--------------------------------------------------------------------}
@@ -232,6 +244,7 @@ var
   UMHotkey: IAIMPAction;
   UMContextMenu: IAIMPMenuItem;
 begin
+ try
   // Create hotkey action
   CheckResult(CoreIntf.CreateObject(IID_IAIMPAction, UMHotkey));
   CheckResult(UMHotkey.SetValueAsObject(AIMP_ACTION_PROPID_ID,
@@ -265,6 +278,9 @@ begin
   // Register PlaylistManagerListener
   CheckResult(CoreIntf.RegisterExtension(IID_IAIMPServicePlaylistManager,
                                           TUMPlaylistManagerListener.Create));
+ except
+  ShowErrorMessage('"CreateActionAndMenu" failure!');
+ end;
 end;
 
 {=========================================================================)
@@ -279,13 +295,16 @@ var
 begin
   case Message  of
     AIMP_MSG_EVENT_LANGUAGE:
-      begin
+      try
+        // Update the name of group in hotkey settings tab
         CheckResult(CoreIntf.QueryInterface(IID_IAIMPServiceActionManager,
                                                     UMServiceActionManager));
         CheckResult(UMServiceActionManager.GetByID(MakeString(UM_HOTKEY_ID),
                                                     UMAction));
         CheckResult(UMAction.SetValueAsObject(AIMP_ACTION_PROPID_GROUPNAME,
                       MakeString(LangLoadString(UM_HOTKEY_GROUPNAME_KEYPATH))));
+      except
+        ShowErrorMessage('"MessageHook.CoreMessage" failure!');
       end;
   end;
 end;
@@ -295,16 +314,19 @@ end;
 (=========================================================================}
 destructor TUMPlaylistManagerListener.Destroy;
 begin
+ try
   if UMPlaylistListener <> nil
   then
-    begin
-      CheckResult(UMAttachedPlaylist.ListenerRemove(UMPlaylistListener));
-    end;
+    CheckResult(UMAttachedPlaylist.ListenerRemove(UMPlaylistListener));
+ except
+  ShowErrorMessage('"PlaylistManagerListener.Destroy" failure!');
+ end;
   inherited;
 end;
 
 procedure TUMPlaylistManagerListener.PlaylistActivated(Playlist: IAIMPPlaylist);
 begin
+ try
   // Register PlaylistListener
   if UMPlaylistListener = nil
   then
@@ -317,6 +339,9 @@ begin
     end;
   CheckResult(Playlist.ListenerAdd(UMPlaylistListener));
   UMAttachedPlaylist := Playlist;
+ except
+  ShowErrorMessage('"PlaylistManagerListener.PlaylistActivated" failure!');
+ end;
 end;
 
 procedure TUMPlaylistManagerListener.PlaylistAdded(Playlist: IAIMPPlaylist);
@@ -335,17 +360,13 @@ end;
 procedure TUMPlaylistListener.Activated;
 begin
   UpdateActionStatusForActivePlaylist;
-//  MessageBox(0, 'TUMPlaylistListener.Activated', 'UM - TEST', 0);
 end;
 
 procedure TUMPlaylistListener.Changed(Flags: DWORD);
 begin
-  if AIMP_PLAYLIST_NOTIFY_READONLY and Flags <> 0
+  if (AIMP_PLAYLIST_NOTIFY_READONLY and Flags) <> 0
   then
-    begin
-      UpdateActionStatusForActivePlaylist;
-//      MessageBox(0, PChar('AIMP_PLAYLIST_NOTIFY_READONLY ' + IntToStr(Flags)), 'UM - TEST', 0);
-    end;
+    UpdateActionStatusForActivePlaylist;
 end;
 
 procedure TUMPlaylistListener.Removed;
@@ -362,15 +383,20 @@ var
   ActivePL: IAIMPPlaylist;
   UMixer: TUltraMixer;
 begin
+ try
   CheckResult(CoreIntf.QueryInterface(IID_IAIMPServicePlaylistManager, PLManager));
   CheckResult(PLManager.GetActivePlaylist(ActivePL));
 
+  // Mixing the active playlist
+  UMixer := TUltraMixer.Create;
   try
-    UMixer := TUltraMixer.Create;
     UMixer.Execute(ActivePL);
   finally
     UMixer.Free;
   end;
+ except
+  ShowErrorMessage('"ExecuteHandler.OnExecute" failure!');
+ end;
 end;
 
 {=========================================================================)
@@ -439,7 +465,7 @@ begin
   SortAuthors(AuthorsList, 0, Length(AuthorsList)-1);
   RandomizeList(AuthorsList);
 
-  // Main cycle of sorting
+  // Main cycle of mixing
   for  i := 0 to Length(AuthorsList) - 1 do
     begin
       for j := 0  to  Length(AuthorsList[i].Songs) - 1 do
@@ -482,7 +508,7 @@ begin
       SortedList[i].Index := PLItemCount - 1;
   end;
  finally
-  CheckResult(Playlist.EndUpdate);
+  Playlist.EndUpdate;
  end;
 end;
 {--------------------------------------------------------------------}
