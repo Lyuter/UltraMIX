@@ -1,7 +1,7 @@
 {~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
              UltraMIX - AIMP3 plugin
-                  Version: 1.4
+                  Version: 1.4.1
               Copyright (c) Lyuter
            Mail : pro100lyuter@mail.ru
 
@@ -19,7 +19,7 @@ uses  Windows, SysUtils, Classes, StrUtils,
 {$R MenuIcon.res}
 
 const
-    UM_PLUGIN_NAME              = 'UltraMIX v1.4 for AIMP 3';
+    UM_PLUGIN_NAME              = 'UltraMIX v1.4.1';
     UM_PLUGIN_AUTHOR            = 'Author: Lyuter';
     UM_PLUGIN_SHORT_DESCRIPTION = 'Provide improved algorithm of playlist mixing';
 	  UM_PLUGIN_FULL_DESCRIPTION  = 'This plugin allows you to evenly distribute ' +
@@ -165,10 +165,10 @@ end;
 Initialize}
 function TUMPlugin.Initialize(Core: IAIMPCore): HRESULT;
 var
-  ServiceMenuManager: IAIMPServiceMenuManager;
+  APlaylistManager: IAIMPServicePlaylistManager;
   UMServiceMessageDispatcher: IAIMPServiceMessageDispatcher;
 begin
-  Result := Core.QueryInterface(IID_IAIMPServiceMenuManager, ServiceMenuManager);
+  Result := Core.QueryInterface(IID_IAIMPServicePlaylistManager, APlaylistManager);
   if Succeeded(Result)
   then
     begin
