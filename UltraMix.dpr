@@ -10,15 +10,6 @@ uses
   apiPlugin,
   UltraMixMain in 'UltraMixMain.pas';
 
-{$IFNDEF DEBUG}
-  {$SetPEFlags IMAGE_FILE_DEBUG_STRIPPED}
-  {$SetPEFlags IMAGE_FILE_LINE_NUMS_STRIPPED}
-  {$SetPEFlags IMAGE_FILE_LOCAL_SYMS_STRIPPED}
-  {$SetPEFlags IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP}
-  {$SetPEFlags IMAGE_FILE_NET_RUN_FROM_SWAP}
-  {$SetPEFlags IMAGE_FILE_EXECUTABLE_IMAGE}
-{$ENDIF}
-
 function AIMPPluginGetHeader(out Header: IAIMPPlugin): HRESULT; stdcall;
 begin
 {$IFDEF DEBUG}
