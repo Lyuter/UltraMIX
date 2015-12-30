@@ -218,7 +218,13 @@ function TUMPlugin.LoadMenuIcon(const ResName: string): IAIMPImage;
 var
   AContainer: IAIMPImageContainer;
   AResStream: TResourceStream;
+  AVerInfo: IAIMPServiceVersionInfo;
 begin
+  if CoreGetService(IID_IAIMPServiceVersionInfo, AVerInfo) then
+  begin
+    if AVerInfo.GetBuildNumber < 1683 then
+      Exit(nil); //#AI - Older version of API has an incorrect definition of the IAIMPImageContainer.SetDataSize method
+  end;
   CheckResult(CoreIntf.CreateObject(IID_IAIMPImageContainer, AContainer));
   AResStream := TResourceStream.Create(HInstance, ResName, RT_RCDATA);
   try
